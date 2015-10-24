@@ -7,19 +7,21 @@ relevant_path = "./img"
 Images = []
 
 class Image(object):
-  def __init__(self, sdcardPath):
+  def __init__(self, sdcardPath, shotDate=''):
     self.sdcardPath = sdcardPath
     self.removePath = ''
-    self.shotDate = ''
+    self.shotDate = shotDate
   def __str__(self):
-    return self.shotDate
+    return str(self.shotDate) + ' ' +  self.sdcardPath
 
 
 def findImages():
   for root, dirnames, filenames in os.walk(relevant_path):
     for filename in filenames:
       if matchesExtensions(filename):
-        Images.append(Image(os.path.join(root, filename)))
+        filePath = os.path.join(root, filename)
+        shotDate = getShotDate(filePath)
+        Images.append(Image(filePath, shotDate))
   return
 
 def matchesExtensions(name,extensions=["*.jpg", "*.cr2", "*.raw"]):
@@ -28,22 +30,27 @@ def matchesExtensions(name,extensions=["*.jpg", "*.cr2", "*.raw"]):
       return True
   return False
 
-def getShotDate():
+def getShotDate(filePath):
   # Open image file for reading (binary mode)
   try:
-    f = open(relevant_path + '/' + img, 'rb')
+    f = open(filePath, 'rb')
 
-    # Return Exif tags
-    tags = exifread.process_file(f, details=False, stop_tag="EXIF DateTimeOriginal")
-    dateTaken = tags["EXIF DateTimeOriginal"]
-    f.close()
-    return dateTaken
-  else:
-    return
+    try:
+      # Return Exif tags
+      tags = exifread.process_file(f, details=False, stop_tag="EXIF DateTimeOriginal")
+      shotDate = tags["EXIF DateTimeOriginal"]
+    except (KeyError) as e:
+      return
+    finally:
+      f.close()
+    return shotDate
 
+  except (IOError, OSError) as e:
+    return 
 
 def main():
   findImages()
+  print('DateTime            Folder' )
   print(*Images, sep='\n')
 
 
